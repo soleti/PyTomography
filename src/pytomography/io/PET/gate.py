@@ -241,9 +241,9 @@ def get_detector_ids(
                     detector_id = detector_id[same_location_idxs]
                 detector_ids[2].append(detector_id)
             if monolithic:
-                true_positions.append([np.concatenate(f[substr][f'globalPosX1'].array(library='np'), f[substr][f'globalPosX2'].array(library='np')),
-                                        np.concatenate(f[substr][f'globalPosY1'].array(library='np'), f[substr][f'globalPosY2'].array(library='np')),
-                                        np.concatenate(f[substr][f'globalPosZ1'].array(library='np'), f[substr][f'globalPosZ2'].array(library='np'))])
+                true_positions.append([np.concatenate((f[substr][f'globalPosX1'].array(library='np'), f[substr][f'globalPosX2'].array(library='np'))),
+                                       np.concatenate((f[substr][f'globalPosY1'].array(library='np'), f[substr][f'globalPosY2'].array(library='np'))),
+                                       np.concatenate((f[substr][f'globalPosZ1'].array(library='np'), f[substr][f'globalPosZ2'].array(library='np')))])
     if TOF:
         detector_ids_numpy = np.array(
             [
