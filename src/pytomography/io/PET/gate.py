@@ -229,7 +229,7 @@ def get_detector_ids(
                 if same_source_pos:
                     detector_id = detector_id[same_location_idxs]
                 if monolithic:
-                    detector_ids[j].extend(list(np.arange(detector_id.shape[0]*(j+1))))
+                    detector_ids[j].append(list(np.arange(detector_id.shape[0]*(j+1))))
                 else:
                     detector_ids[j].append(detector_id.astype(np.int16))
             if TOF:
