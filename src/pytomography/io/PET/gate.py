@@ -228,6 +228,7 @@ def get_detector_ids(
                     + gantry_id
                 if same_source_pos:
                     detector_id = detector_id[same_location_idxs]
+                print(detector_id.shape, np.arange(detector_id.shape[0]*j,detector_id.shape[0]*(j+1)).shape)
                 if monolithic:
                     detector_ids[j].append(list(np.arange(detector_id.shape[0]*(j+1))))
                 else:
