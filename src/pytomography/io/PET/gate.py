@@ -204,7 +204,7 @@ def get_detector_ids(
             Exception('If using TOF, must provide TOF bin edges for binning')
     N_gantry, N_rsector, N_module, N_submodule, N_crystal = get_N_components(mac_file)
     detector_ids = [[],[],[]]
-    true_positions = [[],[]]
+    true_positions = []
     for i,path in enumerate(paths):
         with uproot.open(path) as f:
             if same_source_pos:
@@ -258,7 +258,7 @@ def get_detector_ids(
             np.concatenate(detector_ids[0]),
             np.concatenate(detector_ids[1])]).T
         if monolithic:
-            true_positions_numpy = np.concatenate(true_positions).T
+            true_positions_numpy = np.vstack(true_positions).T
 
     if monolithic:
         return detector_ids_numpy, true_positions_numpy
