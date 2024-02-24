@@ -204,7 +204,7 @@ def get_detector_ids(
             Exception('If using TOF, must provide TOF bin edges for binning')
     N_gantry, N_rsector, N_module, N_submodule, N_crystal = get_N_components(mac_file)
     detector_ids = [[],[],[]]
-    true_positions = [[],[],[]]
+    true_positions = [[],[]]
     for i,path in enumerate(paths):
         with uproot.open(path) as f:
             if same_source_pos:
@@ -228,7 +228,10 @@ def get_detector_ids(
                     + gantry_id
                 if same_source_pos:
                     detector_id = detector_id[same_location_idxs]
-                detector_ids[j].append(detector_id.astype(np.int16))
+                if monolithic:
+                    detector_ids[j].extend(list(np.arange(detector_id.shape[0]*(j+1))))
+                else:
+                    detector_ids[j].append(detector_id.astype(np.int16))
             if TOF:
                 t1 = f[substr]['time1'].array(library='np')
                 t2 = f[substr]['time2'].array(library='np')
@@ -239,11 +242,9 @@ def get_detector_ids(
                 detector_ids[2].append(detector_id)
             if monolithic:
                 for j in range(2):
-                    true_positions[j].append([f[substr][f'globalPosX{j+1}'].array(library='np'),
-                                              f[substr][f'globalPosY{j+1}'].array(library='np'),
-                                              f[substr][f'globalPosZ{j+1}'].array(library='np')])
-                if TOF:
-                    true_positions[2].append(detector_id)
+                    true_positions.append([f[substr][f'globalPosX{j+1}'].array(library='np'),
+                                           f[substr][f'globalPosY{j+1}'].array(library='np'),
+                                           f[substr][f'globalPosZ{j+1}'].array(library='np')])
     if TOF:
         detector_ids_numpy = np.array(
             [
@@ -252,17 +253,12 @@ def get_detector_ids(
                 np.concatenate(detector_ids[2]),
             ]
         ).T
-        if monolithic:
-            true_positions_numpy = np.array([np.concatenate(true_positions[0]),
-                                             np.concatenate(true_positions[1]),
-                                             np.concatenate(true_positions[2])])
     else:
         detector_ids_numpy = np.array([
             np.concatenate(detector_ids[0]),
             np.concatenate(detector_ids[1])]).T
         if monolithic:
-            true_positions_numpy = np.array([np.concatenate(true_positions[0]),
-                                             np.concatenate(true_positions[1])])
+            true_positions_numpy = np.vstack(true_positions).T
 
     if monolithic:
         return detector_ids_numpy, true_positions_numpy
