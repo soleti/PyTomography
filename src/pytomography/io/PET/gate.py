@@ -258,7 +258,7 @@ def get_detector_ids(
             np.concatenate(detector_ids[0]),
             np.concatenate(detector_ids[1])]).T
         if monolithic:
-            true_positions_numpy = np.vstack(true_positions).T
+            true_positions_numpy = np.concatenate(true_positions).T
 
     if monolithic:
         return detector_ids_numpy, true_positions_numpy
