@@ -11,6 +11,8 @@ class PETLMProjMeta():
             weights (torch.tensor | None, optional): weights used to scale projections after forward projection and before back projection; these modify the system matrix :math:`H`. While such weights can be used to apply attenuation/normalization correction, they aren't required in the absence of randoms/scatter; these correction need only be performed using ``weights_sensitivity``. If provided, these weights must have the number of elements as the first dimension of ``detector_ids``. If none, then no scaling is done. Defaults to None.
             detector_ids_sensitivity (torch.tensor | None, optional): valid detector ids used to generate the sensitivity image :math:`\tilde{H}^T 1`. As such, these are used to construct :math:`\tilde{H}`. If None, then assumes all detector ids (specified by ``scanner_LUT``) are valid. Defaults to None.
             weights_sensitivity (torch.tensor | None, optional): weights used for scaling projections in the computation of the sensitivity image, if the weights are given as :math:`w` then the sensitivty image becomes :math:`\tilde{H}^T w`; these modify the system matrix :math:`\tilde{H}`. These weights are used for attenuation/normalization correction. If ``detector_ids_sensitivity`` is provided, then ``weights_sensitivity`` should have the same shape. If ``detector_ids_sensitivity`` is not provided, then ``weights_sensitivity`` should be the same length as all possible combinations of detectors in the ``scanner_LUT``. If None, then no scaling is performed. Defaults to None.
+            use_interaction_positions (bool, optional): use the position of the interaction inside the crystal and not the crystal position. Defaults to false.
+            interaction_positions (torch.tensor | None, optional): if use_interaction_positions is True, this tensor must contain the coordinates of the gamma interaction in the crystal
     """
     def __init__(
         self,
@@ -20,6 +22,8 @@ class PETLMProjMeta():
         weights: torch.tensor | None = None,
         detector_ids_sensitivity: torch.tensor | None = None,
         weights_sensitivity: torch.tensor | None = None,
+        use_interaction_positions: bool = False,
+        interaction_positions: torch.tensor | None = None
     ):
         
         self.detector_ids = detector_ids.cpu()
@@ -27,4 +31,6 @@ class PETLMProjMeta():
         self.tof_meta = tof_meta
         self.weights = weights
         self.detector_ids_sensitivity = detector_ids_sensitivity
-        self.weights_sensitivity = weights_sensitivity  
+        self.weights_sensitivity = weights_sensitivity
+        self.use_interaction_positions = use_interaction_positions
+        self.interaction_positions = interaction_positions

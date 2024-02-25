@@ -156,7 +156,7 @@ def get_scanner_LUT(
         return torch.tensor(np.vstack((x_crystal,y_crystal,-z_crystal)).T), info
     else:
         return torch.tensor(np.vstack((x_crystal,y_crystal,-z_crystal)).T)
-    
+
 def get_N_components(mac_file: str) -> tuple:
     """Obtains the number of gantrys, rsectors, modules, submodules, and crystals per level from a GATE macro file.
 
@@ -183,7 +183,8 @@ def get_detector_ids(
     TOF: bool = False,
     TOF_bin_edges: np.array = None,
     substr: str = 'Coincidences',
-    same_source_pos: bool = False
+    same_source_pos: bool = False,
+    save_interaction_positions: bool = False
     ) -> np.array:
     """Obtains the detector IDs from a sequence of ROOT files
 
@@ -194,7 +195,8 @@ def get_detector_ids(
         TOF_bin_edges (np.array, optional): TOF bin edges; required if TOF is True. Defaults to None.
         substr (str, optional): Substring to index for in ROOT files. Defaults to 'Coincidences'.
         same_source_pos (bool, optional): Only include coincidences that correspond to the same source position. This can be used to filter randoms. Defaults to False.
-
+        save_interaction_positions (bool, optional): Save interaction point of the gamma particle in the crystal (globalPosX, globalPosY, globalPosZ). Defaults to False.
+        
     Returns:
         np.array: Array of all detector ID pairs corresponding to all detected LORs.
     """
@@ -203,6 +205,7 @@ def get_detector_ids(
             Exception('If using TOF, must provide TOF bin edges for binning')
     N_gantry, N_rsector, N_module, N_submodule, N_crystal = get_N_components(mac_file)
     detector_ids = [[],[],[]]
+    true_positions = [[[],[],[]],[[],[],[]]]
     for i,path in enumerate(paths):
         with uproot.open(path) as f:
             if same_source_pos:
@@ -234,16 +237,34 @@ def get_detector_ids(
                 detector_id = np.digitize(-tof_pos, TOF_bin_edges) - 1
                 if same_source_pos:
                     detector_id = detector_id[same_location_idxs]
-                detector_ids[2].append(detector_id) 
+                detector_ids[2].append(detector_id)
+            
+            if save_interaction_positions:
+                for j in range(2):
+                    true_positions[j][0].extend(f[substr][f'globalPosX{j+1}'].array(library='np'))
+                    true_positions[j][1].extend(f[substr][f'globalPosY{j+1}'].array(library='np'))
+                    true_positions[j][2].extend(-f[substr][f'globalPosZ{j+1}'].array(library='np'))
+
+
     if TOF:
-        return np.array([
-            np.concatenate(detector_ids[0]),
-            np.concatenate(detector_ids[1]),
-            np.concatenate(detector_ids[2])]).T
+        detector_ids_numpy = np.array(
+            [
+                np.concatenate(detector_ids[0]),
+                np.concatenate(detector_ids[1]),
+                np.concatenate(detector_ids[2]),
+            ]
+        ).T
     else:
-        return np.array([
+        detector_ids_numpy = np.array([
             np.concatenate(detector_ids[0]),
             np.concatenate(detector_ids[1])]).T
+        if save_interaction_positions:
+            true_positions_numpy = np.array(true_positions).T.swapaxes(1,2)
+
+    if save_interaction_positions:
+        return detector_ids_numpy, true_positions_numpy
+
+    return detector_ids_numpy
 
 def get_radius(detector_ids: torch.tensor, scanner_LUT: torch.tensor) -> torch.tensor:
     """Gets the radial position of all LORs

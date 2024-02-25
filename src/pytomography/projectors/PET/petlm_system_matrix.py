@@ -105,9 +105,11 @@ class PETLMSystemMatrix(SystemMatrix):
         """
         proj = torch.tensor([]).cpu()
         for idx_partial in torch.tensor_split(idx, self.N_splits):
+            sensor_1_coord = self.proj_meta.scanner_lut[idx_partial[:,0].to(torch.int)].to(pytomography.device)
+            sensor_2_coord = self.proj_meta.scanner_lut[idx_partial[:,1].to(torch.int)].to(pytomography.device)
             proj_i = torch.exp(-parallelproj.joseph3d_fwd(
-                self.proj_meta.scanner_lut[idx_partial[:,0]].to(pytomography.device),
-                self.proj_meta.scanner_lut[idx_partial[:,1]].to(pytomography.device),
+                sensor_1_coord,
+                sensor_2_coord,
                 self.attenuation_map[0],
                 self.object_origin,
                 self.object_meta.dr,
@@ -183,9 +185,15 @@ class PETLMSystemMatrix(SystemMatrix):
         """ 
         # Deal With subset stuff
         if subset_idx is not None:
-            idx = self.proj_meta.detector_ids[self.subset_indices_array[subset_idx].cpu()].squeeze()
+            if not self.proj_meta.use_interaction_positions:
+                idx = self.proj_meta.detector_ids[self.subset_indices_array[subset_idx].cpu()].squeeze()
+            else:
+                idx = self.proj_meta.interaction_positions[self.subset_indices_array[subset_idx].cpu()].squeeze()
         else:
-            idx = self.proj_meta.detector_ids.squeeze()
+            if not self.proj_meta.use_interaction_positions:
+                idx = self.proj_meta.detector_ids.squeeze()
+            else:
+                idx = self.proj_meta.interaction_positions.squeeze()
         # Apply object space transforms
         object = object.to(pytomography.device)
         for transform in self.obj2obj_transforms:
@@ -193,10 +201,16 @@ class PETLMSystemMatrix(SystemMatrix):
         # Project
         proj = torch.tensor([]).cpu()
         for idx_partial in torch.tensor_split(idx, self.N_splits):
+            if self.proj_meta.use_interaction_positions:
+                sensor_1_coord = idx_partial[:,0].to(pytomography.device)
+                sensor_2_coord = idx_partial[:,1].to(pytomography.device)
+            else:
+                sensor_1_coord = self.proj_meta.scanner_lut[idx_partial[:,0].to(torch.int)].to(pytomography.device)
+                sensor_2_coord = self.proj_meta.scanner_lut[idx_partial[:,1].to(torch.int)].to(pytomography.device)
             if self.TOF:
                 proj_i = parallelproj.joseph3d_fwd_tof_lm(
-                    self.proj_meta.scanner_lut[idx_partial[:,0].to(torch.int)].to(pytomography.device),
-                    self.proj_meta.scanner_lut[idx_partial[:,1].to(torch.int)].to(pytomography.device),
+                    sensor_1_coord,
+                    sensor_2_coord,
                     object[0],
                     self.object_origin,
                     self.object_meta.dr,
@@ -208,8 +222,8 @@ class PETLMSystemMatrix(SystemMatrix):
                     )
             else:
                 proj_i = parallelproj.joseph3d_fwd(
-                    self.proj_meta.scanner_lut[idx_partial[:,0].to(torch.int)].to(pytomography.device),
-                    self.proj_meta.scanner_lut[idx_partial[:,1].to(torch.int)].to(pytomography.device),
+                    sensor_1_coord,
+                    sensor_2_coord,
                     object[0],
                     self.object_origin,
                     self.object_meta.dr
@@ -237,18 +251,30 @@ class PETLMSystemMatrix(SystemMatrix):
         """
         # Deal With subset stuff
         if subset_idx is not None:
-            idx = self.proj_meta.detector_ids[self.subset_indices_array[subset_idx].cpu()].squeeze()
+            if not self.proj_meta.use_interaction_positions:
+                idx = self.proj_meta.detector_ids[self.subset_indices_array[subset_idx].cpu()].squeeze()
+            else:
+                idx = self.proj_meta.interaction_positions[self.subset_indices_array[subset_idx].cpu()].squeeze()
         else:
-            idx = self.proj_meta.detector_ids.squeeze()
+            if not self.proj_meta.use_interaction_positions:
+                idx = self.proj_meta.detector_ids.squeeze()
+            else:
+                idx = self.proj_meta.interaction_positions.squeeze()
         BP = 0
         if self.proj_meta.weights is not None:
             proj*=self.get_projection_subset(self.proj_meta.weights, subset_idx).cpu()
         for proj_i, idx_partial in zip(torch.tensor_split(proj, self.N_splits), torch.tensor_split(idx, self.N_splits)):
             proj_i = proj_i.to(pytomography.device)
+            if self.proj_meta.use_interaction_positions:
+                sensor_1_coord = idx_partial[:,0].to(pytomography.device)
+                sensor_2_coord = idx_partial[:,1].to(pytomography.device)
+            else:
+                sensor_1_coord = self.proj_meta.scanner_lut[idx_partial[:,0].to(torch.int)].to(pytomography.device)
+                sensor_2_coord = self.proj_meta.scanner_lut[idx_partial[:,1].to(torch.int)].to(pytomography.device)
             if self.TOF:
                 BP += parallelproj.joseph3d_back_tof_lm(
-                    self.proj_meta.scanner_lut[idx_partial[:,0].to(torch.int)].to(pytomography.device),
-                    self.proj_meta.scanner_lut[idx_partial[:,1].to(torch.int)].to(pytomography.device),
+                    sensor_1_coord,
+                    sensor_2_coord,
                     self.object_meta.shape,
                     self.object_origin,
                     self.object_meta.dr,
@@ -261,8 +287,8 @@ class PETLMSystemMatrix(SystemMatrix):
                     ).unsqueeze(0)
             else:
                 BP += parallelproj.joseph3d_back(
-                    self.proj_meta.scanner_lut[idx_partial[:,0].to(torch.int)].to(pytomography.device),
-                    self.proj_meta.scanner_lut[idx_partial[:,1].to(torch.int)].to(pytomography.device),
+                    sensor_1_coord,
+                    sensor_2_coord,
                     self.object_meta.shape,
                     self.object_origin,
                     self.object_meta.dr,
